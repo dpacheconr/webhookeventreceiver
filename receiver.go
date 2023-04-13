@@ -16,7 +16,6 @@ package webhookeventreceiver // import "github.com/open-telemetry/opentelemetry-
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -27,16 +26,18 @@ import (
 
 type webhookeventreceiverReceiver struct {
 	host         component.Host
+	test         string
 	cancel       context.CancelFunc
 	logger       *zap.Logger
 	nextConsumer consumer.Logs
 	config       *Config
 }
 
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
+func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host, test string) error {
 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
 	webhookeventreceiverRcvr.host = host
 	ctx = context.Background()
+	webhookeventreceiverRcvr.test = test
 	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
 	ticker := time.NewTicker(2 * time.Millisecond)
 	for {
@@ -46,7 +47,7 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 		case <-ticker.C:
 			go func() {
 				out := plog.NewLogs()
-				fmt.Print("New log entry")
+				webhookeventreceiverRcvr.logger.Info("New log entry")
 				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
 			}()
 		}
