@@ -44,10 +44,9 @@ func createLogsReceiver(_ context.Context, params receiver.CreateSettings, baseC
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
-func NewFactory() component.Factory {
+func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
 		typeStr,
 		createDefaultConfig,
-		receiver.WithLogs(createLogsReceiver, component.StabilityLevelDevelopment),
-	)
+		receiver.WithLogs(createLogsReceiver, component.StabilityLevelAlpha))
 }
