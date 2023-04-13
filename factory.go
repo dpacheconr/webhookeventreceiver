@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 )
@@ -12,17 +11,11 @@ import (
 const (
 	// The value of "type" key in configuration.
 	typeStr = "generic_webhook"
-	// Default endpoints to bind to.
-	defaultEndpoint = ":8080"
 )
 
 // Default configuration for the generic webhook receiver
 func createDefaultConfig() component.Config {
-	return &Config{
-		HTTPServerSettings: confighttp.HTTPServerSettings{
-			Endpoint: defaultEndpoint,
-		},
-	}
+	return &Config{}
 }
 
 // createLogsReceiver creates a logs receiver based on provided config.
