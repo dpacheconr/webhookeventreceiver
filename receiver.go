@@ -16,6 +16,7 @@ package webhookeventreceiver // import "github.com/open-telemetry/opentelemetry-
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -45,6 +46,7 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 		case <-ticker.C:
 			go func() {
 				out := plog.NewLogs()
+				fmt.Print(plog.NewLogRecord().Body())
 				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
 			}()
 		}
