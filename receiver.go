@@ -49,9 +49,12 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 		case <-ticker.C:
 			go func() {
 				out := plog.NewLogs()
-				webhookeventreceiverRcvr.obsrecv.StartLogsOp(ctx)
-				err := webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
-				webhookeventreceiverRcvr.obsrecv.EndLogsOp(ctx, typeStr, 1, err)
+				rl := out.ResourceLogs().AppendEmpty()
+				resourceAttributes := rl.Resource().Attributes()
+				resourceAttributes.PutStr("webhookeventreceiverRcvr.test", webhookeventreceiverRcvr.test)
+				logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+				logRecord.Body().SetStr("FUCK")
+				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
 			}()
 		}
 	}
