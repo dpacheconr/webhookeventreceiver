@@ -49,7 +49,6 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 			}()
 		}
 	}
-	return nil
 }
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) error {
