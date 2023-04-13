@@ -25,15 +25,6 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-// NewFactory creates a factory for Generic Webhook Receiver.
-func NewFactory() component.Factory {
-	return receiver.NewFactory(
-		typeStr,
-		createDefaultConfig,
-		receiver.WithLogs(createLogsReceiver, component.StabilityLevelDevelopment),
-	)
-}
-
 // createLogsReceiver creates a logs receiver based on provided config.
 func createLogsReceiver(_ context.Context, params receiver.CreateSettings, baseCfg component.Config, consumer consumer.Logs) (receiver.Logs, error) {
 	if consumer == nil {
@@ -50,4 +41,13 @@ func createLogsReceiver(_ context.Context, params receiver.CreateSettings, baseC
 	}
 
 	return logRcvr, nil
+}
+
+// NewFactory creates a factory for Generic Webhook Receiver.
+func NewFactory() component.Factory {
+	return receiver.NewFactory(
+		typeStr,
+		createDefaultConfig,
+		receiver.WithLogs(createLogsReceiver, component.StabilityLevelDevelopment),
+	)
 }
