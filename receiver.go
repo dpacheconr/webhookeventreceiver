@@ -38,6 +38,7 @@ type webhookeventreceiverReceiver struct {
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
 	webhookeventreceiverRcvr.host = host
+	ctx = context.Background()
 	webhookeventreceiverRcvr.test = "test"
 	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
 	ticker := time.NewTicker(2 * time.Second)
