@@ -46,7 +46,7 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 		case <-ticker.C:
 			go func() {
 				out := plog.NewLogs()
-				fmt.Print(plog.NewLogRecord().Timestamp())
+				fmt.Print(out.ResourceLogs())
 				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
 			}()
 		}
