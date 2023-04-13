@@ -16,7 +16,6 @@ package webhookeventreceiver // import "github.com/open-telemetry/opentelemetry-
 
 import (
 	"context"
-	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -25,8 +24,6 @@ import (
 )
 
 type webhookeventreceiverReceiver struct {
-	host         component.Host
-	test         string
 	cancel       context.CancelFunc
 	logger       *zap.Logger
 	nextConsumer consumer.Logs
@@ -35,29 +32,23 @@ type webhookeventreceiverReceiver struct {
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
-	// ctx = context.Background()
-	webhookeventreceiverRcvr.test = "test"
-	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
-	ticker := time.NewTicker(2 * time.Second)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			go func() {
-				out := plog.NewLogs()
-				rl := out.ResourceLogs().AppendEmpty()
-				resourceAttributes := rl.Resource().Attributes()
-				resourceAttributes.PutStr("webhookeventreceiverRcvr.test", webhookeventreceiverRcvr.test)
-				logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
-				logRecord.Body().SetStr("FUCK")
-				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
-			}()
-		}
-	}
+	go webhookeventreceiverRcvr.processEvents(ctx)
+	return nil
+}
+
+func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) processEvents(ctx context.Context) plog.Logs {
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+	resourceAttributes := rl.Resource().Attributes()
+	resourceAttributes.PutStr("webhookeventreceiverRcvr.test", "test")
+	logRecord.Body().SetStr("FUCK")
+	webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, logs)
+	return logs
 }
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) error {
+	webhookeventreceiverRcvr.logger.Debug("shutting down webhookeventreceiver")
 	webhookeventreceiverRcvr.cancel()
 	return nil
 }
