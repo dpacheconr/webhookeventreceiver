@@ -49,6 +49,8 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) processEvents(ctx 
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) error {
 	webhookeventreceiverRcvr.logger.Debug("shutting down webhookeventreceiver")
-	webhookeventreceiverRcvr.cancel()
+	if webhookeventreceiverRcvr.cancel != nil {
+		webhookeventreceiverRcvr.cancel()
+	}
 	return nil
 }
