@@ -16,9 +16,11 @@ package webhookeventreceiver // import "github.com/open-telemetry/opentelemetry-
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 )
 
@@ -31,10 +33,22 @@ type webhookeventreceiverReceiver struct {
 }
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
+	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
 	webhookeventreceiverRcvr.host = host
-	// ctx = context.Background()
-	// ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
-	webhookeventreceiverRcvr.logger.Info("I should start processing now!")
+	ctx = context.Background()
+	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
+	ticker := time.NewTicker(2 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			go func() {
+				out := plog.NewLogs()
+				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
+			}()
+		}
+	}
 	return nil
 }
 
