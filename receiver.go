@@ -20,7 +20,6 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 )
@@ -32,7 +31,6 @@ type webhookeventreceiverReceiver struct {
 	logger       *zap.Logger
 	nextConsumer consumer.Logs
 	config       *Config
-	obsrecv      *obsreport.Receiver
 }
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
