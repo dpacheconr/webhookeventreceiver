@@ -39,7 +39,7 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 	ctx = context.Background()
 	webhookeventreceiverRcvr.test = "test"
 	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
-	ticker := time.NewTicker(2 * time.Millisecond)
+	ticker := time.NewTicker(2 * time.Second)
 	for {
 		select {
 		case <-ctx.Done():
