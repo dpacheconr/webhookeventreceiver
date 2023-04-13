@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.uber.org/zap"
 )
@@ -31,12 +32,12 @@ type webhookeventreceiverReceiver struct {
 	logger       *zap.Logger
 	nextConsumer consumer.Logs
 	config       *Config
+	obsrecv      *obsreport.Receiver
 }
 
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
 	webhookeventreceiverRcvr.host = host
-	ctx = context.Background()
 	webhookeventreceiverRcvr.test = "test"
 	ctx, webhookeventreceiverRcvr.cancel = context.WithCancel(ctx)
 	ticker := time.NewTicker(2 * time.Second)
@@ -47,9 +48,9 @@ func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.
 		case <-ticker.C:
 			go func() {
 				out := plog.NewLogs()
-				webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
-				webhookeventreceiverRcvr.logger.Info("webhookeventreceiver finished")
-
+				webhookeventreceiverRcvr.obsrecv.StartLogsOp(ctx)
+				err := webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, out)
+				webhookeventreceiverRcvr.obsrecv.EndLogsOp(ctx, typeStr, 1, err)
 			}()
 		}
 	}
