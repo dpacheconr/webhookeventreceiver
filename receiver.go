@@ -31,14 +31,12 @@ func newwebhookeventreceiverReceiver(config *Config, nextConsumer consumer.Logs,
 		return nil, err
 	}
 	return &webhookeventreceiverReceiver{
-		params:       params,
 		config:       config,
+		params:       params,
 		nextConsumer: nextConsumer,
-		server: &http.Server{
-			ReadTimeout: config.ReadTimeout,
-			Addr:        config.HTTPServerSettings.Endpoint,
-		},
-		tReceiver: instance,
+		server:       &http.Server{ReadTimeout: config.ReadTimeout, Addr: config.HTTPServerSettings.Endpoint},
+		tReceiver:    instance,
+		logger:       &zap.Logger{},
 	}, nil
 }
 
