@@ -39,7 +39,7 @@ var _ http.Handler = (*webhookeventreceiver)(nil)
 // Start spins up the receiver's HTTP server and makes the receiver start
 // its processing.
 func (fmr *webhookeventreceiver) Start(_ context.Context, host component.Host) error {
-	fmr.logger.Info("Started webhook listener")
+	// fmr.logger.Info("Started webhook listener")
 	if host == nil {
 		return errMissingHost
 	}
