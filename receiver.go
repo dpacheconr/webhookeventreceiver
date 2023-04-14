@@ -1,56 +1,68 @@
-// Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package webhookeventreceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/webhookeventreceiver"
+package webhookeventreceiver
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/obsreport"
+	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 )
 
 type webhookeventreceiverReceiver struct {
-	cancel       context.CancelFunc
-	logger       *zap.Logger
-	nextConsumer consumer.Logs
 	config       *Config
+	params       receiver.CreateSettings
+	nextConsumer consumer.Logs
+	server       *http.Server
+	tReceiver    *obsreport.Receiver
+	logger       *zap.Logger
 }
 
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(ctx context.Context, host component.Host) error {
-	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver started")
-	go webhookeventreceiverRcvr.processEvents(ctx)
-	return nil
-}
-
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) processEvents(ctx context.Context) plog.Logs {
-	logs := plog.NewLogs()
-	rl := logs.ResourceLogs().AppendEmpty()
-	logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
-	resourceAttributes := rl.Resource().Attributes()
-	resourceAttributes.PutStr("webhookeventreceiverRcvr.test", "test")
-	logRecord.Body().SetStr("FUCK")
-	webhookeventreceiverRcvr.nextConsumer.ConsumeLogs(ctx, logs)
-	return logs
-}
-
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) error {
-	webhookeventreceiverRcvr.logger.Debug("shutting down webhookeventreceiver")
-	if webhookeventreceiverRcvr.cancel != nil {
-		webhookeventreceiverRcvr.cancel()
+func newwebhookeventreceiverReceiver(config *Config, nextConsumer consumer.Logs, params receiver.CreateSettings) (receiver.Logs, error) {
+	if nextConsumer == nil {
+		return nil, component.ErrNilNextConsumer
 	}
+
+	instance, err := obsreport.NewReceiver(obsreport.ReceiverSettings{LongLivedCtx: false, ReceiverID: params.ID, Transport: "http", ReceiverCreateSettings: params})
+	if err != nil {
+		return nil, err
+	}
+	return &webhookeventreceiverReceiver{
+		params:       params,
+		config:       config,
+		nextConsumer: nextConsumer,
+		server: &http.Server{
+			ReadTimeout: config.ReadTimeout,
+			Addr:        config.HTTPServerSettings.Endpoint,
+		},
+		tReceiver: instance,
+	}, nil
+}
+
+func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(_ context.Context, host component.Host) error {
+	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver start called")
+	go func() {
+		ddmux := http.NewServeMux()
+		ddmux.HandleFunc("/webhook", webhookeventreceiverRcvr.handleLogs)
+		webhookeventreceiverRcvr.server.Handler = ddmux
+		if err := webhookeventreceiverRcvr.server.ListenAndServe(); err != http.ErrServerClosed {
+			host.ReportFatalError(fmt.Errorf("error starting webhook receiver: %w", err))
+		}
+	}()
 	return nil
+}
+
+func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) handleLogs(w http.ResponseWriter, req *http.Request) {
+	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver handleLogs called")
+	obsCtx := webhookeventreceiverRcvr.tReceiver.StartLogsOp(req.Context())
+	var err error
+	webhookeventreceiverRcvr.tReceiver.EndTracesOp(obsCtx, "NR", 1, err)
+}
+
+func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) (err error) {
+	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver shutdown called")
+	return webhookeventreceiverRcvr.server.Shutdown(ctx)
 }
