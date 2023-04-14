@@ -25,13 +25,12 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-func createLogsReceiver(_ context.Context, params receiver.CreateSettings, baseCfg component.Config, consumer consumer.Logs) (receiver.Logs, error) {
+func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (L receiver.Logs, err error) {
 	if consumer == nil {
 		return nil, component.ErrNilNextConsumer
 	}
-	whCfg := baseCfg.(*Config)
-
-	return newwebhookeventreceiverReceiver(whCfg, consumer, params)
+	rcfg := cfg.(*Config)
+	return newwebhookeventreceiverReceiver(rcfg, consumer, params)
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
