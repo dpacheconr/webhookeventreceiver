@@ -26,6 +26,8 @@ func createDefaultConfig() component.Config {
 	}
 }
 
+var receivers = sharedcomponent.NewSharedComponents()
+
 func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (r receiver.Logs, err error) {
 	rcfg := cfg.(*Config)
 	r = receivers.GetOrAdd(cfg, func() component.Component {
@@ -34,8 +36,6 @@ func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg
 	})
 	return r, nil
 }
-
-var receivers = sharedcomponent.NewSharedComponents()
 
 // NewFactory creates a factory for Generic Webhook Receiver.
 func NewFactory() receiver.Factory {
