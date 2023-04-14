@@ -45,9 +45,9 @@ func newwebhookeventreceiverReceiver(config *Config, nextConsumer consumer.Logs,
 func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(_ context.Context, host component.Host) error {
 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver start called")
 	go func() {
-		ddmux := http.NewServeMux()
-		ddmux.HandleFunc("/webhook", webhookeventreceiverRcvr.handleLogs)
-		webhookeventreceiverRcvr.server.Handler = ddmux
+		whmux := http.NewServeMux()
+		whmux.HandleFunc("/webhook", webhookeventreceiverRcvr.handleLogs)
+		webhookeventreceiverRcvr.server.Handler = whmux
 		if err := webhookeventreceiverRcvr.server.ListenAndServe(); err != http.ErrServerClosed {
 			host.ReportFatalError(fmt.Errorf("error starting webhook receiver: %w", err))
 		}
