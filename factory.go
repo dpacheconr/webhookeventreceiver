@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/sharedcomponent"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/consumer"
@@ -25,9 +26,15 @@ func createDefaultConfig() component.Config {
 	}
 }
 
+var receivers = sharedcomponent.NewSharedComponents()
+
 func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (r receiver.Logs, err error) {
 	rcfg := cfg.(*Config)
-	return newwebhookeventreceiverReceiver(rcfg, consumer, params)
+	r = receivers.GetorAdd(cfg, func() component.Component {
+		wh, _ := newwebhookeventreceiverReceiver(rcfg, consumer, params)
+		return wh
+	})
+	return r, nil
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
