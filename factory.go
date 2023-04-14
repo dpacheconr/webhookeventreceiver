@@ -16,8 +16,12 @@ const (
 	typeStr = "generic_webhook"
 )
 
+type webhookeventreceiverFactory struct {
+	receivers *sharedcomponent.SharedComponents
+}
+
 // Default configuration for the generic webhook receiver
-func createDefaultConfig() component.Config {
+func (f *webhookeventreceiverFactory) createDefaultConfig() component.Config {
 	return &Config{
 		HTTPServerSettings: confighttp.HTTPServerSettings{
 			Endpoint: "localhost:8080",
@@ -26,11 +30,9 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-var receivers = sharedcomponent.NewSharedComponents()
-
-func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (r receiver.Logs, err error) {
+func (f *webhookeventreceiverFactory) createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (r receiver.Logs, err error) {
 	rcfg := cfg.(*Config)
-	r = receivers.GetOrAdd(cfg, func() component.Component {
+	r = f.receivers.GetOrAdd(cfg, func() component.Component {
 		wh, _ := newwebhookeventreceiverReceiver(rcfg, consumer, params)
 		return wh
 	})
@@ -39,8 +41,12 @@ func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg
 
 // NewFactory creates a factory for Generic Webhook Receiver.
 func NewFactory() receiver.Factory {
+	f := &webhookeventreceiverFactory{
+		receivers: sharedcomponent.NewSharedComponents(),
+	}
 	return receiver.NewFactory(
 		typeStr,
-		createDefaultConfig,
-		receiver.WithLogs(createLogsReceiver, component.StabilityLevelAlpha))
+		f.createDefaultConfig,
+		f.createDefaultConfig,
+		receiver.WithLogs(f.createLogsReceiver, component.StabilityLevelAlpha))
 }
