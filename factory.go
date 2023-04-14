@@ -32,11 +32,7 @@ func (f *webhookeventreceiverFactory) createDefaultConfig() component.Config {
 
 func (f *webhookeventreceiverFactory) createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (r receiver.Logs, err error) {
 	rcfg := cfg.(*Config)
-	r = f.receivers.GetOrAdd(cfg, func() component.Component {
-		wh, _ := newwebhookeventreceiverReceiver(rcfg, consumer, params)
-		return wh
-	})
-	return r, nil
+	return newwebhookeventreceiverReceiver(rcfg, consumer, params)
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
