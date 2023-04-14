@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -17,10 +16,8 @@ var (
 	errMissingHost = errors.New("nil host")
 )
 
-// The webhookeventreceiver is responsible for using the unmarshaler and the consumer.
 type webhookeventconsumer interface {
-	// Consume unmarshalls and consumes the records.
-	Consume(ctx context.Context, records [][]byte, commonAttributes map[string]string) (int, error)
+	Consume(ctx context.Context) (int, error)
 }
 
 // webhookeventreceiver
@@ -81,24 +78,20 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 
 // ServeHTTP receives webhookevent requests, and sends them along to the consumer,
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// body, err := fmr.getBody(r)
-	// if err != nil {
-	// 	fmr.settings.Logger.Error("Error reading response body")
-	// 	return
-	// }
-
-	fmt.Fprintf(w, "BODY NOT WORKING")
+	ctx := r.Context()
+	fmt.Fprintf(w, "served")
+	fmr.consumer.Consume(ctx)
 }
 
 // getBody reads the body from the request as a slice of bytes.
-func (fmr *webhookeventreceiver) getBody(r *http.Request) ([]byte, error) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-	err = r.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-	return body, nil
-}
+// func (fmr *webhookeventreceiver) getBody(r *http.Request) ([]byte, error) {
+// 	body, err := io.ReadAll(r.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	err = r.Body.Close()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return body, nil
+// }

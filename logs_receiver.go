@@ -35,6 +35,7 @@ func newLogsReceiver(
 	}, nil
 }
 
-func (mc *LogsConsumer) Consume(ctx context.Context, records [][]byte, commonAttributes map[string]string) (int, error) {
+func (mc *LogsConsumer) Consume(ctx context.Context) (int, error) {
+
 	return http.StatusOK, nil
 }
