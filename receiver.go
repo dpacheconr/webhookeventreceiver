@@ -87,7 +87,7 @@ func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fmt.Fprintf(w, string(body))
+	fmt.Fprintf(w, "BODY NOT WORKING")
 }
 
 // getBody reads the body from the request as a slice of bytes.
