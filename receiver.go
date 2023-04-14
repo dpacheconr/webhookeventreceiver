@@ -81,11 +81,11 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 
 // ServeHTTP receives webhookevent requests, and sends them along to the consumer,
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	body, err := fmr.getBody(r)
-	if err != nil {
-		fmr.settings.Logger.Error("Error reading response body")
-		return
-	}
+	// body, err := fmr.getBody(r)
+	// if err != nil {
+	// 	fmr.settings.Logger.Error("Error reading response body")
+	// 	return
+	// }
 
 	fmt.Fprintf(w, "BODY NOT WORKING")
 }
