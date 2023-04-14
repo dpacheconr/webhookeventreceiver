@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"sync"
@@ -80,7 +81,24 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 
 // ServeHTTP receives webhookevent requests, and sends them along to the consumer,
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmr.settings.Logger.Info("Serving webhook receiver http")
-	// ctx := r.Context()
-	fmt.Fprintf(w, "Serving\n")
+	body, err := fmr.getBody(r)
+	if err != nil {
+		fmr.settings.Logger.Error("Error reading response body")
+		return
+	}
+
+	fmt.Println(w, string(body))
+}
+
+// getBody reads the body from the request as a slice of bytes.
+func (fmr *webhookeventreceiver) getBody(r *http.Request) ([]byte, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = r.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
 }
