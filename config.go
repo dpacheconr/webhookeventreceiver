@@ -1,7 +1,7 @@
 package webhookeventreceiver
 
 import (
-	"time"
+	"errors"
 
 	"go.opentelemetry.io/collector/config/confighttp"
 )
@@ -9,6 +9,13 @@ import (
 // Config defines configuration for the Generic Webhook receiver.
 type Config struct {
 	confighttp.HTTPServerSettings `mapstructure:",squash"`
-	// ReadTimeout of the http server
-	ReadTimeout time.Duration `mapstructure:"read_timeout"`
+}
+
+// Validate checks that the endpoint and record type exist and
+// are valid.
+func (c *Config) Validate() error {
+	if c.Endpoint == "" {
+		return errors.New("must specify endpoint")
+	}
+	return nil
 }

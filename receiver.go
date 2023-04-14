@@ -2,64 +2,102 @@ package webhookeventreceiver
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net"
 	"net/http"
+	"sync"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/obsreport"
 	"go.opentelemetry.io/collector/receiver"
-	"go.uber.org/zap"
 )
 
-type webhookeventreceiverReceiver struct {
-	config       *Config
-	params       receiver.CreateSettings
-	nextConsumer consumer.Logs
-	server       *http.Server
-	tReceiver    *obsreport.Receiver
-	logger       *zap.Logger
+var (
+	errMissingHost = errors.New("nil host")
+)
+
+// The webhookeventreceiver is responsible for using the unmarshaler and the consumer.
+type webhookeventconsumer interface {
+	// Consume unmarshalls and consumes the records.
+	Consume(ctx context.Context, records [][]byte, commonAttributes map[string]string) (int, error)
 }
 
-func newwebhookeventreceiverReceiver(config *Config, consumer consumer.Logs, params receiver.CreateSettings) (receiver.Logs, error) {
-	if consumer == nil {
-		return nil, component.ErrNilNextConsumer
+// webhookeventreceiver
+type webhookeventreceiver struct {
+	// settings is the base receiver settings.
+	settings receiver.CreateSettings
+	// config is the configuration for the receiver.
+	config *Config
+	// server is the HTTP/HTTPS server set up to listen
+	// for requests.
+	server *http.Server
+	// shutdownWG is the WaitGroup that is used to wait until
+	// the server shutdown has completed.
+	shutdownWG sync.WaitGroup
+	// consumer is the firehoseConsumer to use to process/send
+	// the records in each request.
+	consumer webhookeventconsumer
+}
+
+// The firehoseRequest is the format of the received request body.
+type webhookeventrequest struct {
+	// request was generated.
+	Timestamp int64 `json:"timestamp"`
+}
+
+// The firehoseRecord is an individual record within the firehoseRequest.
+type webhookeventrecord struct {
+	// Data is a base64 encoded string. Can be empty.
+	Data string `json:"data"`
+}
+
+var _ receiver.Logs = (*webhookeventreceiver)(nil)
+var _ http.Handler = (*webhookeventreceiver)(nil)
+
+// Start spins up the receiver's HTTP server and makes the receiver start
+// its processing.
+func (fmr *webhookeventreceiver) Start(_ context.Context, host component.Host) error {
+	if host == nil {
+		return errMissingHost
 	}
 
-	instance, err := obsreport.NewReceiver(obsreport.ReceiverSettings{LongLivedCtx: false, ReceiverID: params.ID, Transport: "http", ReceiverCreateSettings: params})
+	var err error
+	fmr.server, err = fmr.config.HTTPServerSettings.ToServer(host, fmr.settings.TelemetrySettings, fmr)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &webhookeventreceiverReceiver{
-		config:       config,
-		params:       params,
-		nextConsumer: consumer,
-		server:       &http.Server{ReadTimeout: config.ReadTimeout, Addr: config.HTTPServerSettings.Endpoint},
-		tReceiver:    instance,
-		logger:       &zap.Logger{},
-	}, nil
-}
 
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Start(_ context.Context, host component.Host) error {
-	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver start called")
-	// go func() {
-	// 	whmux := http.NewServeMux()
-	// 	whmux.HandleFunc("/webhook", webhookeventreceiverRcvr.handleLogs)
-	// 	webhookeventreceiverRcvr.server.Handler = whmux
-	// 	if err := webhookeventreceiverRcvr.server.ListenAndServe(); err != http.ErrServerClosed {
-	// 		host.ReportFatalError(fmt.Errorf("error starting webhook receiver: %w", err))
-	// 	}
-	// }()
+	var listener net.Listener
+	listener, err = fmr.config.HTTPServerSettings.ToListener()
+	if err != nil {
+		return err
+	}
+	fmr.shutdownWG.Add(1)
+	go func() {
+		defer fmr.shutdownWG.Done()
+
+		if errHTTP := fmr.server.Serve(listener); errHTTP != nil && !errors.Is(errHTTP, http.ErrServerClosed) {
+			host.ReportFatalError(errHTTP)
+		}
+	}()
+
 	return nil
 }
 
-// func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) handleLogs(w http.ResponseWriter, req *http.Request) {
-// 	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver handleLogs called")
-// 	obsCtx := webhookeventreceiverRcvr.tReceiver.StartLogsOp(req.Context())
-// 	var err error
-// 	webhookeventreceiverRcvr.tReceiver.EndTracesOp(obsCtx, "NR", 1, err)
-// }
+// Shutdown tells the receiver that should stop reception,
+// giving it a chance to perform any necessary clean-up and
+// shutting down its HTTP server.
+func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
+	if fmr.server == nil {
+		return nil
+	}
+	err := fmr.server.Close()
+	fmr.shutdownWG.Wait()
+	return err
+}
 
-func (webhookeventreceiverRcvr *webhookeventreceiverReceiver) Shutdown(ctx context.Context) (err error) {
-	webhookeventreceiverRcvr.logger.Info("webhookeventreceiver shutdown called")
-	return webhookeventreceiverRcvr.server.Shutdown(ctx)
+// ServeHTTP receives webhookevent requests, and sends them along to the consumer,
+func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// ctx := r.Context()
+	fmt.Fprintf(w, "Serving\n")
 }

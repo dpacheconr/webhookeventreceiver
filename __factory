@@ -2,6 +2,7 @@ package webhookeventreceiver
 
 import (
 	"context"
+	"time"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/confighttp"
@@ -10,21 +11,26 @@ import (
 )
 
 const (
-	typeStr         = "generic_webhook"
-	defaultEndpoint = "0.0.0.0:8080"
+	// The value of "type" key in configuration.
+	typeStr = "generic_webhook"
 )
 
 // Default configuration for the generic webhook receiver
 func createDefaultConfig() component.Config {
 	return &Config{
 		HTTPServerSettings: confighttp.HTTPServerSettings{
-			Endpoint: defaultEndpoint,
+			Endpoint: "localhost:8080",
 		},
+		ReadTimeout: 60 * time.Second,
 	}
 }
 
 func createLogsReceiver(ctx context.Context, params receiver.CreateSettings, cfg component.Config, consumer consumer.Logs) (L receiver.Logs, err error) {
-	return newwebhookeventreceiverReceiver(cfg.(*Config), consumer, params)
+	if consumer == nil {
+		return nil, component.ErrNilNextConsumer
+	}
+	rcfg := cfg.(*Config)
+	return newwebhookeventreceiverReceiver(rcfg, consumer, params)
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
