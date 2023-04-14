@@ -9,19 +9,13 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
-// The metricsConsumer implements the firehoseConsumer
-// to use a metrics consumer and unmarshaler.
 type LogsConsumer struct {
-	// consumer passes the translated metrics on to the
-	// next consumer.
 	consumer consumer.Logs
 }
 
 var _ webhookeventconsumer = (*LogsConsumer)(nil)
 
-// newMetricsReceiver creates a new instance of the receiver
-// with a metricsConsumer.
-func newMetricsReceiver(
+func newLogsReceiver(
 	config *Config,
 	set receiver.CreateSettings,
 	nextConsumer consumer.Logs,
