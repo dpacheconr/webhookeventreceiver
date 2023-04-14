@@ -22,17 +22,9 @@ func createLogsReceiver(_ context.Context, params receiver.CreateSettings, baseC
 	if consumer == nil {
 		return nil, component.ErrNilNextConsumer
 	}
-
-	logger := params.Logger
 	whCfg := baseCfg.(*Config)
 
-	logRcvr := &webhookeventreceiverReceiver{
-		logger:       logger,
-		nextConsumer: consumer,
-		config:       whCfg,
-	}
-
-	return logRcvr, nil
+	return newwebhookeventreceiverReceiver(whCfg, consumer, params)
 }
 
 // NewFactory creates a factory for Generic Webhook Receiver.
