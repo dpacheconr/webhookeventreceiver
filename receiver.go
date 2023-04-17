@@ -82,9 +82,6 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 // ServeHTTP receives webhookevent requests, and sends them along to the consumer,
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	fmt.Fprintf(w, "served")
-	// r.Body = http.MaxBytesReader(w, r.Body, 1048576)
-	// dec := json.NewDecoder(r.Body)
 	var bodyBytes []byte
 	var err error
 	if r.Body != nil {
