@@ -120,7 +120,7 @@ func (fmr *webhookeventreceiver) getBody(r *http.Request) (body string) {
 	bodystring := prettyJSON.String()
 	var result map[string]any
 	json.Unmarshal([]byte(bodystring), &result)
-	results := result["metrics"].(map[string]any)
+	results := result["birds"].(map[string]any)
 
 	for key, value := range results {
 		// Each value is an `any` type, that is type asserted as a string
