@@ -36,11 +36,15 @@ type webhookeventreceiver struct {
 // 	Content string `json:"content"`
 // }
 
+type Bird struct {
+	Species     string
+	Description string
+}
+
 var _ receiver.Logs = (*webhookeventreceiver)(nil)
 var _ http.Handler = (*webhookeventreceiver)(nil)
 
-// Start spins up the receiver's HTTP server and makes the receiver start
-// its processing.
+// Start spins up the receiver's HTTP server and makes the receiver start its processing.
 func (fmr *webhookeventreceiver) Start(_ context.Context, host component.Host) error {
 	fmr.settings.Logger.Info("Webhookreceiver starting")
 	if host == nil {
@@ -83,16 +87,16 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 	return err
 }
 
-// ServeHTTP receives webhookevent requests, and sends them along to the consumer,
+// ServeHTTP receives webhookevent events and processes them
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	body := GetBody(r)
-	reqBody, _ := ioutil.ReadAll(r.Body)
-	fmt.Fprintf(w, "%+v", string(reqBody))
+	body := fmr.getBody(r)
+	// reqBody, _ := ioutil.ReadAll(r.Body)
+	// fmt.Fprintf(w, "%+v", string(reqBody))
 	fmr.consumer.Consume(ctx, body)
 }
 
-func GetBody(r *http.Request) (body string) {
+func (fmr *webhookeventreceiver) getBody(r *http.Request) (body string) {
 	var bodyBytes []byte
 	var err error
 	if r.Body != nil {
@@ -109,9 +113,20 @@ func GetBody(r *http.Request) (body string) {
 			fmt.Printf("JSON parse error: %v", err)
 			return
 		}
-		fmt.Println(prettyJSON.String())
+		fmr.settings.Logger.Info(prettyJSON.String())
 	} else {
-		fmt.Printf("Body: No Body Supplied\n")
+		fmr.settings.Logger.Info("Body: No Body Supplied\n")
 	}
-	return prettyJSON.String()
+	bodystring := prettyJSON.String()
+	var result map[string]any
+	json.Unmarshal([]byte(bodystring), &result)
+	results := result["metrics"].(map[string]any)
+
+	for key, value := range results {
+		// Each value is an `any` type, that is type asserted as a string
+		fmt.Println(key, value.(string))
+	}
+
+	return bodystring
+
 }
