@@ -32,6 +32,10 @@ type webhookeventreceiver struct {
 	consumer   webhookeventconsumer
 }
 
+// type Record struct {
+// 	Content string `json:"content"`
+// }
+
 var _ receiver.Logs = (*webhookeventreceiver)(nil)
 var _ http.Handler = (*webhookeventreceiver)(nil)
 
@@ -82,6 +86,13 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 // ServeHTTP receives webhookevent requests, and sends them along to the consumer,
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	body := GetBody(r)
+	reqBody, _ := ioutil.ReadAll(r.Body)
+	fmt.Fprintf(w, "%+v", string(reqBody))
+	fmr.consumer.Consume(ctx, body)
+}
+
+func GetBody(r *http.Request) (body string) {
 	var bodyBytes []byte
 	var err error
 	if r.Body != nil {
@@ -102,21 +113,5 @@ func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	} else {
 		fmt.Printf("Body: No Body Supplied\n")
 	}
-	// testbdy := new(bytes.Buffer)
-	// testbdy.ReadFrom(r.Body)
-	// spew.Dump(testbdy.String())
-	fmr.consumer.Consume(ctx, prettyJSON.String())
+	return prettyJSON.String()
 }
-
-// getBody reads the body from the request as a slice of bytes.
-// func (fmr *webhookeventreceiver) getBody(r *http.Request) ([]byte, error) {
-// 	body, err := io.ReadAll(r.Body)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	err = r.Body.Close()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return body, nil
-// }
