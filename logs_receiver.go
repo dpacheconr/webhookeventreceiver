@@ -6,6 +6,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/receiver"
 )
 
@@ -24,18 +25,26 @@ func newLogsReceiver(
 		return nil, component.ErrNilNextConsumer
 	}
 
-	mc := &LogsConsumer{
+	lc := &LogsConsumer{
 		consumer: nextConsumer,
 	}
 
 	return &webhookeventreceiver{
 		settings: set,
 		config:   config,
-		consumer: mc,
+		consumer: lc,
 	}, nil
 }
 
-func (mc *LogsConsumer) Consume(ctx context.Context) (int, error) {
+func (lc *LogsConsumer) Consume(ctx context.Context, payload string) (int, error) {
+	logs := plog.NewLogs()
+	rl := logs.ResourceLogs().AppendEmpty()
+	resourceAttributes := rl.Resource().Attributes()
+	resourceAttributes.PutStr("lc.consumer", "test")
+
+	logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+	logRecord.Body().SetStr(payload)
+	lc.consumer.ConsumeLogs(ctx, logs)
 
 	return http.StatusOK, nil
 }

@@ -1,9 +1,12 @@
 package webhookeventreceiver
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"sync"
@@ -17,7 +20,7 @@ var (
 )
 
 type webhookeventconsumer interface {
-	Consume(ctx context.Context) (int, error)
+	Consume(ctx context.Context, payload string) (int, error)
 }
 
 // webhookeventreceiver
@@ -80,7 +83,32 @@ func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
 func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	fmt.Fprintf(w, "served")
-	fmr.consumer.Consume(ctx)
+	// r.Body = http.MaxBytesReader(w, r.Body, 1048576)
+	// dec := json.NewDecoder(r.Body)
+	var bodyBytes []byte
+	var err error
+	if r.Body != nil {
+		bodyBytes, err = ioutil.ReadAll(r.Body)
+		if err != nil {
+			fmt.Printf("Body reading error: %v", err)
+			return
+		}
+		defer r.Body.Close()
+	}
+	var prettyJSON bytes.Buffer
+	if len(bodyBytes) > 0 {
+		if err = json.Indent(&prettyJSON, bodyBytes, "", "\t"); err != nil {
+			fmt.Printf("JSON parse error: %v", err)
+			return
+		}
+		fmt.Println(prettyJSON.String())
+	} else {
+		fmt.Printf("Body: No Body Supplied\n")
+	}
+	// testbdy := new(bytes.Buffer)
+	// testbdy.ReadFrom(r.Body)
+	// spew.Dump(testbdy.String())
+	fmr.consumer.Consume(ctx, prettyJSON.String())
 }
 
 // getBody reads the body from the request as a slice of bytes.
