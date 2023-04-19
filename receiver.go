@@ -32,41 +32,32 @@ type webhookeventreceiver struct {
 	consumer   webhookeventconsumer
 }
 
-// type Record struct {
-// 	Content string `json:"content"`
-// }
-
-type Bird struct {
-	Species     string
-	Description string
-}
-
 var _ receiver.Logs = (*webhookeventreceiver)(nil)
 var _ http.Handler = (*webhookeventreceiver)(nil)
 
 // Start spins up the receiver's HTTP server and makes the receiver start its processing.
-func (fmr *webhookeventreceiver) Start(_ context.Context, host component.Host) error {
-	fmr.settings.Logger.Info("Webhookreceiver starting")
+func (whr *webhookeventreceiver) Start(_ context.Context, host component.Host) error {
+	whr.settings.Logger.Info("Webhookreceiver starting")
 	if host == nil {
 		return errMissingHost
 	}
 
 	var err error
-	fmr.server, err = fmr.config.HTTPServerSettings.ToServer(host, fmr.settings.TelemetrySettings, fmr)
+	whr.server, err = whr.config.HTTPServerSettings.ToServer(host, whr.settings.TelemetrySettings, whr)
 	if err != nil {
 		return err
 	}
 
 	var listener net.Listener
-	listener, err = fmr.config.HTTPServerSettings.ToListener()
+	listener, err = whr.config.HTTPServerSettings.ToListener()
 	if err != nil {
 		return err
 	}
-	fmr.shutdownWG.Add(1)
+	whr.shutdownWG.Add(1)
 	go func() {
-		defer fmr.shutdownWG.Done()
+		defer whr.shutdownWG.Done()
 
-		if errHTTP := fmr.server.Serve(listener); errHTTP != nil && !errors.Is(errHTTP, http.ErrServerClosed) {
+		if errHTTP := whr.server.Serve(listener); errHTTP != nil && !errors.Is(errHTTP, http.ErrServerClosed) {
 			host.ReportFatalError(errHTTP)
 		}
 	}()
@@ -77,26 +68,38 @@ func (fmr *webhookeventreceiver) Start(_ context.Context, host component.Host) e
 // Shutdown tells the receiver that should stop reception,
 // giving it a chance to perform any necessary clean-up and
 // shutting down its HTTP server.
-func (fmr *webhookeventreceiver) Shutdown(context.Context) error {
-	fmr.settings.Logger.Info("Closing Webhookreceiver")
-	if fmr.server == nil {
+func (whr *webhookeventreceiver) Shutdown(context.Context) error {
+	whr.settings.Logger.Info("Closing Webhookreceiver")
+	if whr.server == nil {
 		return nil
 	}
-	err := fmr.server.Close()
-	fmr.shutdownWG.Wait()
+	err := whr.server.Close()
+	whr.shutdownWG.Wait()
 	return err
 }
 
 // ServeHTTP receives webhookevent events and processes them
-func (fmr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (whr *webhookeventreceiver) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	body := fmr.getBody(r)
-	// reqBody, _ := ioutil.ReadAll(r.Body)
-	// fmt.Fprintf(w, "%+v", string(reqBody))
-	fmr.consumer.Consume(ctx, body)
+	body := whr.getBody(r)
+	if r.URL.Path != "/webhook" {
+		w.WriteHeader(404)
+		return
+	}
+	switch r.Method {
+	case "POST":
+		// Always reply with 200 OK even if we can't process it
+		w.WriteHeader(200)
+		// Consume the event received
+		whr.consumer.Consume(ctx, body)
+
+	default:
+		fmt.Fprintf(w, "Sorry, only POST method is supported.")
+	}
+
 }
 
-func (fmr *webhookeventreceiver) getBody(r *http.Request) (body string) {
+func (whr *webhookeventreceiver) getBody(r *http.Request) (body string) {
 	var bodyBytes []byte
 	var err error
 	if r.Body != nil {
@@ -113,19 +116,10 @@ func (fmr *webhookeventreceiver) getBody(r *http.Request) (body string) {
 			fmt.Printf("JSON parse error: %v", err)
 			return
 		}
-		fmr.settings.Logger.Info(prettyJSON.String())
 	} else {
-		fmr.settings.Logger.Info("Body: No Body Supplied\n")
+		whr.settings.Logger.Info("Body: No Body Supplied\n")
 	}
 	bodystring := prettyJSON.String()
-	var result map[string]any
-	json.Unmarshal([]byte(bodystring), &result)
-	results := result["birds"].(map[string]any)
-
-	for key, value := range results {
-		// Each value is an `any` type, that is type asserted as a string
-		fmt.Println(key, value.(string))
-	}
 
 	return bodystring
 

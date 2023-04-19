@@ -9,6 +9,7 @@ import (
 // Config defines configuration for the Generic Webhook receiver.
 type Config struct {
 	confighttp.HTTPServerSettings `mapstructure:",squash"`
+	ServiceName                   string
 }
 
 // Validate checks that the endpoint and record type exist and

@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	typeStr         = "generic_webhook"
-	defaultEndpoint = "0.0.0.0:8080"
+	typeStr            = "generic_webhook"
+	defaultEndpoint    = "0.0.0.0:8080"
+	defaultServiceName = "githubeventconsumer"
 )
 
 // Default configuration for the generic webhook receiver
@@ -20,6 +21,7 @@ func createDefaultConfig() component.Config {
 		HTTPServerSettings: confighttp.HTTPServerSettings{
 			Endpoint: defaultEndpoint,
 		},
+		ServiceName: defaultServiceName,
 	}
 }
 
