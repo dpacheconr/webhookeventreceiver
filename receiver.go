@@ -120,6 +120,7 @@ func (whr *webhookeventreceiver) getBody(r *http.Request) (body string) {
 		whr.settings.Logger.Info("Body: No Body Supplied\n")
 	}
 	bodystring := prettyJSON.String()
+	// bodystring := bodyBytes
 
 	return bodystring
 

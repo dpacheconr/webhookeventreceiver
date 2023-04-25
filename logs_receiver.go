@@ -3,6 +3,7 @@ package webhookeventreceiver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -46,15 +47,34 @@ func newLogsReceiver(
 func (lc *LogsConsumer) Consume(ctx context.Context, payload string) (int, error) {
 	logs := plog.NewLogs()
 	rl := logs.ResourceLogs().AppendEmpty()
+	sl := rl.ScopeLogs().AppendEmpty()
 	resourceAttributes := rl.Resource().Attributes()
 	resourceAttributes.PutStr("service.name", servicename)
-	logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
+	logRecord := sl.LogRecords().AppendEmpty()
+	// logRecord := rl.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 
 	logRecord.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))
 	var result map[string]any
-	json.Unmarshal([]byte(payload), &result)
-	// logRecord.Body().SetEmptyMap().FromRaw(result)
-	logRecord.Body().SetStr(payload)
+	err := json.Unmarshal([]byte(payload), &result)
+	if err != nil {
+		// print out if error is not nil
+		fmt.Println(err)
+	}
+
+	// parse nested json and set is as log attributes
+	for key, val := range result {
+		if rec, ok := val.(map[string]interface{}); ok {
+			for key1, val1 := range rec {
+				val1 := fmt.Sprintf("%v", val1)
+				resourceAttributes.PutStr(key+"."+key1, val1)
+			}
+		} else {
+			value := fmt.Sprintf("%v", rec)
+			fmt.Println(key + "." + value)
+		}
+	}
+	// or set parsed json as log body by updating the below method
+	logRecord.Body().SetStr("wenhookeventdata")
 	lc.consumer.ConsumeLogs(ctx, logs)
 
 	return http.StatusOK, nil
